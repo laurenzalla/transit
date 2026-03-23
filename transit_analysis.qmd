@@ -1,0 +1,1289 @@
+---
+bibliography: transit.bib
+csl: american-medical-association.csl
+
+format:
+  #docx: default
+  pdf: default
+
+fontfamily: times
+fontsize: "12pt"
+include-in-header:
+  text: |
+    \setkomafont{title}{\normalfont}
+        
+margin-left: "0.75in"
+margin-right: "0.75in"
+margin-top: "0.5in"
+margin-bottom: "0.5in"
+
+filters:
+  - wordcount
+wordcount:
+  count-code-blocks: false
+  count-inline-code: false
+
+#insert word count: https://github.com/christopherkenny/wordcount
+#format appendix: https://github.com/quarto-dev/quarto-cli/discussions/4581
+#suppress tables and figures in word document: https://quarto.org/docs/authoring/conditional.html
+---
+
+```{r}
+#| label: setup
+#| message: false
+#| include: false
+
+.libPaths("S:/JHU_HIVcohorts/Analyses_Zalla/RPackages")
+library(biscale)
+library(cowplot)
+library(dplyr)
+library(ggspatial)
+library(ggthemes)
+library(gt)
+library(gtsummary)
+library(gee)
+library(geepack)
+library(haven)
+library(here)
+library(knitr)
+library(labelled)
+library(lubridate)
+library(nnet)
+library(RColorBrewer)
+library(scales)
+library(sf)
+library(stringr)
+library(tidycensus)
+library(tidyr)
+library(tidyverse)
+library(tinytex)
+
+here::i_am("transit_analysis.qmd")
+
+#add commas to integers
+knit_print.integer = function(x, ...) {
+  prettyNum(x, big.mark=",")
+}
+registerS3method(
+  "knit_print", "integer", knit_print.integer,
+  envir = asNamespace("knitr")
+)
+
+#format proportions as percentages rounded to ones place
+
+```
+
+# Public transit accessibility and engagement in HIV care in Baltimore, Maryland
+
+Lauren C. Zalla, PhD^1^ Joyce L. Jones, MD^2^ Richard D. Moore, MD^2^ Nicholas Schweizer, EdD^2^ Jeanne C. Keruly, CRNP^2^ Laquita N. Snow, RN^2^ Rahel Dawit, PhD^1^, Lorraine T. Dean, ScD^1^, Anthony T. Fojo, MD^2^, Catherine R. Lesko, PhD^1^
+
+^1^Johns Hopkins Bloomberg School of Public Health, Baltimore, MD
+
+^2^Johns Hopkins School of Medicine, Baltimore, MD
+
+**Corresponding Author:** Lauren C. Zalla, Department of Epidemiology, Johns Hopkins Bloomberg School of Public Health, 615 N. Wolfe St, Baltimore, MD 21231 (lzalla1\@jhu.edu)
+
+**Funding:** This work was supported in part by grants K99-AI181608 (LCZ), K01-AA028193 (CRL), U01-DA036935 (RDM), and R01-MD018539 (ATF) from the National Institutes of Health.
+
+::: {.content-visible when-format="html"}
+**Word Count:** {{wordcount}}
+:::
+
+**Abstract Word Count:** 336/350
+
+**Manuscript Word Count:** 2,542/3,000
+
+\newpage
+
+## Key Points
+
+**Question:** Is public transit accessibility associated with engagement in care among persons with HIV?
+
+**Findings:** In a cohort study of persons receiving HIV care in Baltimore, Maryland, longer transit time-to-clinic was associated with a lower probability of missing a scheduled visit. Demographic and socioeconomic differences between individuals living closer to vs. further from the clinic accounted for most of this association.
+
+**Meaning:** Individuals living in socioeconomically disadvantaged urban neighborhoods were more likely to miss clinic visits despite closer proximity to care via public transportation.
+
+## Abstract
+
+**Importance:** Public transit systems may play an important role in ensuring equitable access to care and care outcomes among people with HIV.
+
+**Objective:** To examine public transit accessibility and estimate the association between transit time-to-clinic and missed visits among persons with HIV.
+
+**Design:** Longitudinal observational cohort study.
+
+**Setting:** Baltimore, Maryland
+
+**Participants:** Persons with at least one scheduled visit at a comprehensive HIV care clinic in 2024.
+
+**Exposure:** Travel time to the clinic by public transit, estimated using participant residential addresses geocoded to the census block group level.
+
+**Main Outcomes and Measures:** The probability of missing a scheduled visit, the probability of rescheduling a missed visit, and the probability of attending a rescheduled visit. Differences in the probability of missing a scheduled visit across transit time categories were adjusted for sex, age, race/ethnicity, insurance type, income, and area-level socioeconomic deprivation.
+
+**Results:** 1,233 participants scheduled a median of 4 clinic visits (interquartile range \[IQR\]: 2,6) in 2024. 23% of visits were missed; 53% of missed visits were rescheduled within 30 days; 48% of rescheduled visits were attended. Median driving time-to-clinic was 11 minutes (IQR: 6, 16) and median transit time was 39 minutes (IQR: 27, 51). Shorter transit time-to-clinic was associated with a higher probability of missing a visit; for example, individuals living in areas from which the clinic was not transit-accessible were 8% less likely to miss a visit than those living 1-30 minutes away (95% confidence interval \[CI\]: -13%, -3%). After adjusting for covariates, this difference was attenuated (-2%; 95% CI: -9%, 4%).
+
+**Conclusions and Relevance:** Among individuals receiving comprehensive HIV care in Baltimore, shorter transit time-to-clinic was associated with a higher probability of missing a scheduled visit. The clinic’s location in a transit-accessible but socioeconomically disadvantaged area, its flexible scheduling practices, and provision of transportation support services likely account for the inverse association between transit accessibility and visit attendance in this context. In addition to transportation access and support services, additional interventions are needed to address structural barriers to care engagement among persons with HIV.
+
+\newpage
+
+## Introduction
+
+           Of the estimated 1.2 million people living with HIV in the United States, only 47% were retained in HIV medical care in 2022.[@centers_for_disease_control_and_prevention_monitoring_2024] A key barrier to retention in care is distance to care: an estimated 19% of U.S. people with HIV need to drive more than 30 minutes to access HIV care.[@daoud_health_2025; @Masiano2019] Longer driving time to care is associated with missed visits, cancelled or rescheduled visits, running late to visits, and running out of antiretroviral medications.[@harrison_does_2025; @ridgway_travel_2017; @cornelius_impact_2017] However, driving time may be a poor proxy for travel time via public transit, which is the preferred or only available transportation option for many people with HIV.[@sagrestano_transportation_2014] Access to public transit that is "available, accessible, accommodating, affordable, and acceptable" is an important structural determinant of health and health equity.[@henning-smith_public_2020] Some communities are systematically underserved by public transit, which may contribute to inequities in access to care and care outcomes.[@heaps_public_2021; @mitchell_patient-identified_2023] Moreover, in the modern treatment era, particularly in urban areas, public transit is likely to play a critical role in facilitating access to long-acting injectable antiretroviral therapies, which require regular attendance at injection visits.[@cooper_barriers_2022]
+
+           While previous studies have linked self-reported unmet transportation needs to poor care engagement,[@blackstock_considering_2015; @Colasanti2017; @wawrzyniak_association_2015; @miller_qualitative_2024] few have directly measured public transit accessibility and examined how it impacts HIV risk or clinical outcomes among people with HIV.[@luan_comparison_2025] Understanding how public transit shapes care engagement and outcomes can help inform structural interventions to improve retention in care and viral suppression. Here, we examine public transit accessibility, compare driving time vs. transit time to care, and estimate the association between transit accessibility and missed visits in a cohort of persons receiving HIV care in Baltimore, Maryland.
+
+```{r}
+#| label: data-setup
+#| include: false
+#| eval: true
+
+
+#All scheduled HIV primary care visits at Bartlett (in-person or telehealth) from Jan 1, 2024 - Jan 30, 2025
+visits <- read_sas("S:/JHU_HIVcohorts/JHHCC/2025Q1/visits_04sep2025.sas7bdat")
+visits <- visits %>%
+  filter(encounterdate >= as.Date("2024-01-01") & encounterdate <= as.Date("2025-01-30"),
+         encountertype %in% c("Initial","HIV primary care"),
+         encounterlocation != "Outside HIV clinic") %>%
+  mutate(publicins=if_else(encounterinstype1 %in% c("Medicaid","Medicare","Other Public insurance (s","Ryan White"),1,0),
+         telehealth=if_else(encounterlocation=="In HIV clinic",0,1),
+         sameday = if_else(encounterdate==apptmadedate, 1, 0),
+         winter = if_else(encounterdate <as.Date("2024-03-01") | encounterdate >= as.Date("2025-12-01"), 1, 0)) %>%
+  select(id, encounterdate, apptmadedate, apptstatus, encounterlocation, publicins, telehealth, sameday, winter)
+
+#Indicator of any public insurance in 2024
+publicins <- visits %>%
+  filter(encounterdate >= as.Date("2024-01-01") & encounterdate <= as.Date("2024-12-31")) %>%
+  group_by(id) %>%
+  summarize(publicins=max(publicins))
+
+#First visit per participant per day
+visits <- visits %>%
+  group_by(id, encounterdate) %>%
+  arrange(apptstatus) %>%
+  filter(row_number()==1)
+
+#Merge in insurance type
+visits <- visits %>%
+  left_join(publicins)
+
+#Merge in demographics
+visits <- visits %>%
+  left_join(read_sas("S:/JHU_HIVcohorts/JHHCC/2025Q1/flat_04sep2025.sas7bdat") %>%
+              select(id, birthsex, raceeth, age0, starty),
+            by=join_by(id)) %>%
+  mutate(starty_orig = as.Date(starty),
+         age = as.numeric(age0 + (encounterdate-starty)/365),
+         agegrp = if_else(age<45, 0, if_else(age>=45, 1, NA))) %>%
+  select(id, encounterdate, apptmadedate, apptstatus, encounterlocation, publicins, telehealth, sameday, winter, birthsex, raceeth, age, agegrp)
+
+#Merge in income based on lowest FPL from 2023-2024
+fpl <- (read_sas("S:/JHU_HIVcohorts/JHHCC/2025Q1/sdoh_04sep2025.sas7bdat")) %>%
+  filter(!is.na(fpl) & contact_date >= as.Date("2023-01-01")) %>%
+  group_by(id) %>%
+  arrange(fpl) %>%
+  filter(row_number()==1) %>%
+  select(id, fpl)
+visits <- visits %>%
+  left_join(fpl) %>%
+  mutate(income=if_else(is.na(fpl),0,if_else(fpl<=200,1,0)))
+
+#Merge in geocodes and ADI
+visits <- visits %>%
+  left_join(read_sas("R:/hivcohort_nojhhno/Lesko-HIVCohortFiles/Total Cohort 2025 Q1/geocodes_04sep2025.sas7bdat"),
+            by=join_by(id),
+            relationship = "many-to-many") %>%
+  mutate(county=as.numeric(substr(geocode,1,5))) %>%
+  filter(movedate <= encounterdate | is.na(movedate)) %>%
+  group_by(id, encounterdate) %>%
+  arrange(id, encounterdate, desc(movedate)) %>%
+  filter(row_number()==1) %>%
+  ungroup()
+
+#Limit to people with a last known address in Baltimore City or Baltimore County
+visits <- visits %>%
+  filter(county %in% c("24005","24510"))
+
+#Check whether patient rescheduled a "make-up" visit within 30 days of each missed in-person visit in 2024
+missed_visits <- visits %>%
+  filter(apptstatus=="No show" & telehealth != 1) %>%
+  rename(missed=apptstatus) %>%
+  arrange(id, encounterdate) %>%
+  select(id, encounterdate, missed)
+rescheduled <- visits %>%
+  arrange(id, encounterdate) %>%
+  rename(upper=apptmadedate) %>%
+  mutate(rescheduled=1,
+         lower=upper-30,
+         rescheduled_telehealth=if_else(encounterlocation=="In HIV clinic",0,1),
+         rescheduled_sameday=if_else(encounterdate==upper, 1, 0)) %>%
+  select(id, lower, upper, rescheduled, apptstatus, rescheduled_telehealth, rescheduled_sameday)
+#Check whether the makeup visit was attended, whether it was a same-day appointment, and whether it was attended in person or via telehealth
+merged <- missed_visits %>%
+  left_join(rescheduled, by=join_by(x$id==y$id, between(encounterdate, lower, upper))) %>%
+  group_by(id, encounterdate) %>%
+  filter(row_number()==1) %>%
+  mutate(attended=if_else(apptstatus=="Arrived",1,0),
+         attended_telehealth=if_else(attended==1,rescheduled_telehealth,NA),
+         attended_sameday=if_else(attended==1, rescheduled_sameday,NA)) %>%
+  select(id, encounterdate, missed, rescheduled, rescheduled_telehealth, attended, attended_telehealth, attended_sameday)
+visits <- visits %>%
+  left_join(merged) %>%
+  mutate(missed=if_else(is.na(missed) & telehealth != 1,0,
+                        if_else(telehealth != 1, 1, NA)),
+         rescheduled=if_else(is.na(rescheduled) & missed==1, 0, rescheduled),
+         attended=if_else(is.na(attended) & rescheduled==1, 0, attended))
+
+#Limit to visits in Jan-Dec 2024
+visits <- visits %>%
+  filter(encounterdate >= as.Date("2024-01-01") & encounterdate <= as.Date("2024-12-31"))
+
+#Limit to visits that were not walk-ins
+visits <- visits %>%
+  filter(sameday==0)
+
+#Merge in travel time matrix
+load(file = paste0(here(),"/Data/ettm.RData"))
+load(file = paste0(here(),"/Data/ettm_120.RData"))
+load(file = paste0(here(),"/Data/drivetime.RData"))
+
+ettm <- ettm %>%
+  mutate(walk_time=access_time+transfer_time+egress_time) %>%
+  group_by(from_id) %>%
+  summarize(walk = median(walk_time, na.rm=TRUE),
+            wait = median(wait_time, na.rm=TRUE),
+            nrides = as.integer(median(n_rides, na.rm=TRUE)),
+            total = median(total_time, na.rm=TRUE))
+
+ettm_120 <- ettm_120 %>%
+  mutate(walk_time=access_time+transfer_time+egress_time) %>%
+  group_by(from_id) %>%
+  summarize(walk_120 = median(walk_time, na.rm=TRUE),
+            wait_120 = median(wait_time, na.rm=TRUE),
+            nrides_120 = as.integer(median(n_rides, na.rm=TRUE)),
+            total_120 = median(total_time, na.rm=TRUE))
+
+drivetime <- drivetime %>%
+  rename(drivetime=travel_time_p50) %>%
+  select(from_id, drivetime)
+
+visits <- visits %>%
+  left_join(ettm, by=join_by("geocode"=="from_id")) %>%
+  left_join(ettm_120, by=join_by("geocode"=="from_id")) %>%
+  left_join(drivetime, by=join_by("geocode"=="from_id")) %>%
+  mutate(time_cat = if_else(is.na(total), 4,
+                            if_else(total<=30, 1,
+                            if_else(total<=60, 2,
+                            if_else(total<=120, 3, NA)))),
+         time_cat_120 = if_else(is.na(total_120), 4,
+                            if_else(total_120<=30, 1,
+                            if_else(total_120<=60, 2,
+                            if_else(total_120<=120, 3, NA)))),
+         time_bin = if_else(time_cat<=2,0,1),
+         accessible = if_else(time_cat<=3,1,0),
+         adi_bin = if_else(adi_state<=8,0,1),
+         scheduled = if_else(telehealth != 1, 1, NA))
+
+#Add labels
+var_label(visits) <- list( 
+  publicins = "Insurance Type",
+  birthsex = "Birth Sex",
+  raceeth = "Race/Ethnicity",
+  agegrp = "Age Group",
+  income = "Income",
+  adi_bin = "Area Deprivation",
+  county = "Place of Residence",
+  telehealth = "Visit Mode",
+  rescheduled_telehealth = "Visit Mode",
+  attended_telehealth = "Visit Mode",
+  drivetime = "Driving Time (Min)",
+  total = "Transit Time (Min)",
+  walk = "Walking Time (Min)",
+  wait = "Waiting Time (Min)",
+  nrides = "Number of Rides",
+  total_120 = "Transit Time (Min)",
+  walk_120 = "Walking Time (Min)",
+  wait_120 = "Waiting Time (Min)",
+  nrides_120 = "Number of Rides",
+  scheduled = "Scheduled",
+  missed = "Missed|Scheduled",
+  rescheduled = "Rescheduled|Missed",
+  attended = "Attended|Rescheduled",
+  sameday = "All Scheduled Visits",
+  attended_sameday = "Same-Day Appointments",
+  winter = "Season"
+) 
+val_labels(visits) <- list(
+  apptstatus=c("Attended"="Arrived","Missed"="No show"),
+  time_cat=c("1-30 Min"=1,"31-60 Min"=2,"61-90 Min"=3,"Not Accessible"=4),
+  time_cat_120=c("1-30 Min"=1,"31-60 Min"=2,"61-120 Min"=3,"Not Accessible"=4),
+  time_bin=c("1-60 Min"=0,">60 Min"=1),
+  accessible=c("Accessible"=1,"Not Accessible"=0),
+  publicins=c("Public"=1,"Private"=0),
+  raceeth=c("Non-Hispanic White"=1,"Non-Hispanic Black"=2,"Hispanic"=3,"Other"=8),
+  agegrp=c("<45"=0,">=45"=1),
+  income=c("Income >200% FPL"=0,"Income <=200% FPL"=1),
+  county=c("Baltimore City"=24510,"Baltimore County"=24005),
+  scheduled=c("Scheduled, N"=1),
+  telehealth=c("In Person"=0,"Telehealth"=1),
+  sameday=c("Yes"=1,"No"=0),
+  attended_sameday=c("Yes"=1,"No"=0),
+  rescheduled_telehealth=c("In Person"=0,"Telehealth"=1),
+  attended_telehealth=c("In Person"=0,"Telehealth"=1),
+  adi_bin=c("80% Least-Deprived"=0,"20% Most-Deprived"=1),
+  winter=c("December-February"=1,"March-November"=0)
+)
+  
+#Download census block group geographies from 5-year ACS 2018-2022
+bc <- get_acs(geography = "block group",
+              variables = c(pop = "B01003_001",
+                            median_income = "B19013_001"),
+              survey = "acs5",
+              output = "wide",
+              state = "Maryland",
+              county = c("Baltimore city","Baltimore County"),
+              geometry = TRUE,
+              year = 2022)
+
+#Bartlett Practice
+bartlett <- data.frame(id="bartlett", lat=39.298399, lon=-76.593530)
+bartlett_sf <- st_as_sf(bartlett, coords = c("lon", "lat"), crs = st_crs(bc))
+
+
+```
+
+## Methods
+
+### Study Population
+
+           Data for this analysis came from the Johns Hopkins HIV Clinical Cohort (JHHCC), a longitudinal observational cohort study of persons with HIV receiving care at the John G. Bartlett Specialty Practice in Baltimore, Maryland.[@lesko_cohort_2024] Baltimore is the largest city in Maryland and has the third-highest rate of persons living with HIV of all Ending the HIV Epidemic (EHE) priority jurisdictions; in 2022, 1 in 47 adults and adolescents living in Baltimore had been diagnosed with HIV.[@centers_for_disease_control_and_prevention_diagnoses_2024] The Bartlett Practice offers comprehensive HIV care and wrap-around services through a staff of primary care providers, social workers, case managers, patient navigators, psychiatrists, and psychotherapists. The majority of patients reside in or near Baltimore.
+
+           The cohort study was approved by the Johns Hopkins Medicine Institutional Review Board. Study participants consented to share their medical records, including visit records, diagnoses, laboratory test results, and prescription records. For this analysis, we included participants with at least one scheduled HIV primary care visit in 2024 and a concurrent residential address in Baltimore City or Baltimore County.
+
+### Exposures
+
+           The primary exposure was public transit time to the Bartlett Practice, estimated using the r5r package in R.[@pereira_r5r_2021] We used street network data from OpenStreetMap and global transit feed specification (GTFS) data from the Maryland Transit Administration to implement multimodal routing in r5r, which provides an interface to the routing engine Rapid Realistic Routing on Real-world and Reimagined networks (R^5^).[@conway_evidence-based_2017] R^5^ uses street maps and transit timetables to construct a multimodal transportation network from which travel time estimates and related information can be extracted.
+
+           We defined public transit as any combination of walking and/or riding the bus, light rail, metro, and ferry routes in Baltimore City or Baltimore County (Appendix @tbl-a1). We estimated the total time of a one-way trip from the centroid of each participant’s census block group of residence to the Bartlett Practice. Each participant could contribute multiple visits to the analysis, and residential addresses were time-updated to reflect the census block group of residence at the time of each visit. We allowed for up to 15 minutes of walking to access public transit, up to 15 minutes of walking for each transfer between routes, and up to 15 minutes of walking from the last transit stop to the Bartlett Practice. To account for variability in total transit time by departure time, we estimated the median total transit time over all shortest possible trips departing in one-minute increments from 7:30AM-5:00PM on Monday, June 6, 2025 (clinic hours are 8:00AM-5:30PM). We classified median total transit time into intervals of 1-30 minutes, 31-60 minutes, 61-90 minutes, and "not accessible". We used a 90-minute cutoff to determine transit accessibility, corresponding to the 90-minute free transfers provided by the Maryland Transit Administration.
+
+           In addition to the median total transit time, we also captured the median number of rides, median waiting time, and median walking time across all shortest possible trips. We also estimated median driving time from the centroid of each participant's census block group of residence to the Bartlett Practice over the same departure window of 7:30AM-5:00PM.
+
+### Outcomes
+
+           We assessed the outcome of each scheduled in-person HIV primary care visit in January-December 2024: attended, cancelled, or missed. The denominator for this calculation excluded visits that were scheduled on the same day they were attended (i.e., walk-in appointments). We also assessed whether each missed visit was rescheduled within 30 days, and whether each rescheduled visit was attended; we included walk-in appointments in the numerator for these calculations.
+
+### Covariates
+
+           From electronic health records, we obtained sex assigned at birth (male, female), age (categorized as \<45 vs. \>=45), self-reported race and ethnicity (categorized as non-Hispanic Black, non-Hispanic White, or Hispanic), insurance type (categorized as public vs. private) and residential address geocoded to the census block group level (categorized as Baltimore City vs. Baltimore County). From geocoded residential addresses, we also measured area-level socioeconomic deprivation using the 2015 area deprivation index (ADI), categorizing census block groups as being among the top 20% most-deprived or 80% least-deprived block groups in the state of Maryland. The 2015 ADI was used because participant addresses were geocoded to census block groups using boundaries from the 2010 Census. The 2015 ADI is based on 5-year American Community Survey (ACS) data for 2011-2015, which correspond to administrative boundaries from the 2010 Census.
+
+           As part of routine clinical care, cohort participants are screened annually to determine initial or ongoing eligibility for services through the Ryan White HIV/AIDS Program (RWHAP). From the screening questionnaire, we determined individual income as a percentage of the Federal Poverty Level (FPL), categorized as \<=200% vs. \>200% FPL. For all rescheduled visits, we captured visit modality (in person vs. telehealth) and whether the visit was a walk-in (i.e., scheduled on the same day it was attended).
+
+### Statistical Analysis
+
+           We used descriptive statistics to examine the percent of scheduled in-person HIV primary care visits that were attended, cancelled, or missed in the overall sample and by participant demographics. We also examined the percent of missed visits that were rescheduled and the percent of rescheduled visits that were attended in the overall sample and by participant demographics.
+
+           We estimated median driving time, transit time, number of rides, waiting time, and walking time across all scheduled in-person HIV primary care visits, overall and by individual-level demographic characteristics. We examined the association between transit accessibility and area-level socioeconomic deprivation by creating a bivariate map of transit time and ADI.
+
+           For each category of transit time, we estimated the probability of missing a scheduled in-person HIV primary care visit, the probability of rescheduling a missed visit, and the probability of attending a rescheduled visit. We estimated differences in visit outcome probabilities across transit time categories using generalized estimating equations (GEE), with confidence intervals calculated using a robust standard error to account for the clustering of visits within participants and of participants within census block groups. In a secondary analysis, we adjusted for sex, age, race/ethnicity, insurance type, income, and area socioeconomic deprivation using inverse probability weights (IPW).
+
+## Results
+
+### *Visit Outcomes*
+
+```{r}
+#| label: visit-outcomes
+#| include: false
+#| eval: true
+
+#unique study participants
+nparticipants <- length(unique(visits$id))
+
+#total in-person visits and # visits per participant
+nvisits <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(id) %>%
+  summarize(count = n()) %>%
+  summarize(total = sum(count),
+            median = median(count),
+            p25 = median-IQR(count)/2,
+            p75 = median+IQR(count)/2,
+            min = min(count),
+            max = max(count))
+
+#visit outcome frequencies
+outcomes <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(apptstatus) %>%
+  summarize(count = n(),
+            percent = percent(count/nrow(visits), 1))
+
+#outcome frequencies by race
+outcomes_race <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(raceeth, apptstatus) %>%
+  summarize(count = n()) %>%
+  group_by(raceeth) %>%
+  mutate(total=sum(count),
+         percent=percent(count/total, 1))
+
+#outcome frequencies by age
+outcomes_age <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(agegrp, apptstatus) %>%
+  summarize(count = n()) %>%
+  group_by(agegrp) %>%
+  mutate(total=sum(count),
+         percent=percent(count/total, 1))
+
+#outcome frequencies by income
+outcomes_income <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(income, apptstatus) %>%
+  summarize(count = n()) %>%
+  group_by(income) %>%
+  mutate(total=sum(count),
+         percent=percent(count/total, 1))
+
+#outcome frequencies by place of residence
+outcomes_res <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(county, apptstatus) %>%
+  summarize(count = n()) %>%
+  group_by(county) %>%
+  mutate(total=sum(count),
+         percent=percent(count/total, 1))
+
+#percent of missed visits that were rescheduled
+missed_resc <- visits %>%
+  filter(missed==1) %>%
+  group_by(rescheduled) %>%
+  summarize(count = n()) %>%
+  mutate(percent = percent(count/sum(count), 1))
+
+#percent of missed visits that were made up
+missed_makeup <- visits %>%
+  filter(rescheduled==1) %>%
+  group_by(attended) %>%
+  summarize(count = n()) %>%
+  mutate(percent = percent(count/sum(count), 1))
+    
+
+#makeup visits that were scheduled on the same day
+makeup_sameday <- visits %>%
+  filter(attended==1) %>%
+  group_by(attended_sameday) %>%
+  summarize(count = n()) %>%
+  mutate(percent = percent(count/sum(count), 1))
+
+#makeup visits that were attended via telehealth
+makeup_telehealth <- visits %>%
+  filter(attended==1) %>%
+  group_by(attended_telehealth) %>%
+  summarize(count = n()) %>%
+  mutate(percent = percent(count/sum(count), 1))
+
+#Individual-level proportion of in-person visits that were missed in Jan-Dec 2024
+pmissed <- visits %>%
+  filter(encounterdate >= as.Date("2024-01-01") & encounterdate <= as.Date("2024-12-31") & telehealth != 1) %>%
+  group_by(id) %>%
+  summarize(den = n(),
+            num = sum(missed),
+            pmissed = num/den)
+#Median (IQR)
+p_missed <- pmissed %>%
+  summarize(pmissed_median = percent(median(pmissed), 1),
+            pmissed_p25 = percent(quantile(pmissed, probs=0.25), 1),
+            pmissed_p75 = percent(quantile(pmissed, probs=0.75), 1))
+
+```
+
+```{r}
+#| label: transit-accessibility
+#| include: false
+#| eval: true
+
+#transit time category frequencies
+time_freq <- visits %>%
+  filter(scheduled==1) %>%
+  group_by(time_cat) %>%
+  summarize(count = n(),
+            percent = percent(count/nrow(visits), 1))
+
+#median transit time
+time_median <- visits %>%
+  filter(scheduled==1) %>%
+  summarize(drivetime_median = round(median(drivetime, na.rm=TRUE),0),
+            drivetime_p25 = round(median(drivetime, na.rm=TRUE)-IQR(drivetime, na.rm=TRUE)/2,0),
+            drivetime_p75 = round(median(drivetime, na.rm=TRUE)+IQR(drivetime, na.rm=TRUE)/2,0),
+            total_median = round(median(total, na.rm=TRUE),0),
+            total_p25 = round(median(total, na.rm=TRUE)-IQR(total, na.rm=TRUE)/2,0),
+            total_p75 = round(median(total, na.rm=TRUE)+IQR(total, na.rm=TRUE)/2,0),
+            walk_median = round(median(walk, na.rm=TRUE),0),
+            walk_p25 = round(median(walk, na.rm=TRUE)-IQR(walk, na.rm=TRUE)/2,0),
+            walk_p75 = round(median(walk, na.rm=TRUE)+IQR(walk, na.rm=TRUE)/2,0),
+            wait_median = round(median(wait, na.rm=TRUE),0),
+            wait_p25 = round(median(wait, na.rm=TRUE)-IQR(wait, na.rm=TRUE)/2,0),
+            wait_p75 = round(median(wait, na.rm=TRUE)+IQR(wait, na.rm=TRUE)/2,0),
+            nrides_median = round(median(nrides, na.rm=TRUE),0),
+            nrides_p25 = round(median(nrides, na.rm=TRUE)-IQR(nrides, na.rm=TRUE)/2,0),
+            nrides_p75 = round(median(nrides, na.rm=TRUE)+IQR(nrides, na.rm=TRUE)/2,0))
+
+```
+
+           A total of `r nparticipants` study participants scheduled `r nvisits$total` in-person HIV primary care visits in 2024, ranging from `r nvisits$min` to `r nvisits$max` visits per person (median: `r nvisits$median` visits per person \[IQR: `r nvisits$p25`, `r nvisits$p75`\]). Of all scheduled visits, `r outcomes$count[outcomes$apptstatus=="Arrived"]` (`r outcomes$percent[outcomes$apptstatus=="Arrived"]`) were attended, `r outcomes$count[outcomes$apptstatus=="Cancelled"]` (`r outcomes$percent[outcomes$apptstatus=="Cancelled"]`) were cancelled, and `r outcomes$count[outcomes$apptstatus=="No show"]` (`r outcomes$percent[outcomes$apptstatus=="No show"]`) were missed (@tbl-one). At the individual level, the median percent of missed visits out of all scheduled visits was `r p_missed$pmissed_median` (IQR: `r p_missed$pmissed_p25`, `r p_missed$pmissed_p75`). Visits were more likely to be missed by individuals who were non-Hispanic Black (`r outcomes_race$percent[outcomes_race$raceeth==2 & outcomes_race$apptstatus=="No show"]`) compared to non-Hispanic White (`r outcomes_race$percent[outcomes_race$raceeth==1 & outcomes_race$apptstatus=="No show"]`) or Hispanic (`r outcomes_race$percent[outcomes_race$raceeth==3 & outcomes_race$apptstatus=="No show"]`), by those aged \<= 45 years (`r outcomes_age$percent[outcomes_age$agegrp==0 & outcomes_age$apptstatus=="No show"]`) vs. \>45 (`r outcomes_age$percent[outcomes_age$agegrp==1 & outcomes_age$apptstatus=="No show"]`), by those with income \>200% FPL (`r outcomes_income$percent[outcomes_income$income==0 & outcomes_income$apptstatus=="No show"]`) vs. \<=200% FPL (`r outcomes_income$percent[outcomes_income$income==1 & outcomes_income$apptstatus=="No show"]`), and by those living in Baltimore City (`r outcomes_res$percent[outcomes_res$county==24510 & outcomes_res$apptstatus=="No show"]`) vs. Baltimore County (`r outcomes_res$percent[outcomes_res$county==24005 & outcomes_res$apptstatus=="No show"]`) (@tbl-one).
+
+           Of all missed visits, `r missed_resc$count[missed_resc$rescheduled==1]` (`r missed_resc$percent[missed_resc$rescheduled==1]`) were rescheduled within 30 days, and `r missed_makeup$count[missed_makeup$attended==1]` (`r missed_makeup$percent[missed_makeup$attended==1]`) of rescheduled visits were attended. Missed visits were more likely to be rescheduled and made up by individuals who were older, had lower income, and lived in Baltimore City vs. Baltimore County (Appendix @tbl-a2). Of all make-up visits, `r makeup_sameday$count[makeup_sameday$attended_sameday==1]` (`r makeup_sameday$percent[makeup_sameday$attended_sameday==1]`) were walk-ins and `r makeup_telehealth$count[makeup_telehealth$attended_telehealth==1]` (`r makeup_telehealth$percent[makeup_telehealth$attended_telehealth==1]`) were attended via telehealth (Appendix @tbl-a3).
+
+### *Public Transit Accessibility*
+
+           Across all scheduled in-person HIV primary care visits, median driving time was `r time_median$drivetime_median` minutes (IQR: `r time_median$drivetime_p25`, `r time_median$drivetime_p75`) and median transit time was `r time_median$total_median` minutes (IQR: `r time_median$total_p25`, `r time_median$total_p75`) (@tbl-a4). A majority of the `r time_freq$count[time_freq$time_cat==4]` (`r time_freq$percent[time_freq$time_cat==4]`) visits that were not accessible by public transit were scheduled by residents of Baltimore County (@fig-one, Appendix @tbl-a5). Shorter transit time was associated with lower income and higher area socio-economic deprivation (@fig-two; Appendix @tbl-a5).
+
+           Across all scheduled visits that were transit-accessible, individuals spent a median of `r time_median$total_median` total minutes in transit across `r time_median$nrides_median` rides (IQR: `r time_median$nrides_p25`, `r time_median$nrides_p75`), including `r time_median$wait_median` minutes spent waiting (IQR: `r time_median$wait_p25`, `r time_median$wait_p75`) and `r time_median$walk_median` minutes spent walking (IQR: `r time_median$walk_p25`, `r time_median$walk_p75`) (@tbl-a4).
+
+### *Association of Public Transit Accessibility with Visit Outcomes*
+
+```{r}
+#| label: associations
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+#pause automatic printing of output
+sink(nullfile())
+
+#Unadjusted Differences
+scheduled <- visits %>%
+  filter(scheduled==1) %>%
+  mutate(time_cat=as.factor(time_cat))
+  
+model <- gee(
+  formula = missed ~ time_cat,
+  id = id,
+  data = scheduled,
+  family = binomial(link="identity"),
+  corstr = "exchangeable"
+)
+coef <- as.data.frame(coef(summary(model)))
+ci_missed <- as.data.frame(with(coef,
+           cbind(rownames(coef),
+                 estimate = percent(Estimate*-1,1),
+                 Lower = percent(Estimate - qnorm(0.975)*`Robust S.E.`,1),
+                 Upper = percent(Estimate + qnorm(0.975)*`Robust S.E.`,1)))) %>%
+  filter(V1 !="(Intercept)") %>%
+  mutate(time_cat = str_sub(V1,-1,-1),
+         ci = paste0(Lower,", ",Upper),
+         outcome = "Missed|Scheduled") %>%
+  select(outcome, time_cat, estimate, ci)
+
+
+#Adjusted Differences
+visits2 <- visits %>%
+  filter(scheduled==1 & !is.na(adi_bin)) %>%
+  mutate(time_cat=as.factor(time_cat),
+         raceeth=as.factor(raceeth))
+
+weights <- multinom(time_cat ~ birthsex + raceeth + agegrp + publicins + income + adi_bin, data = visits2)
+pred <- fitted(weights)
+den <- cbind(visits2, pred) %>%
+  mutate(fitted = if_else(time_cat==1, `1`,
+                              if_else(time_cat==2, `2`,
+                                      if_else(time_cat==3, `3`,
+                                              if_else(time_cat==4, `4`, NA)))))
+num <- as.data.frame(table(visits2$time_cat)) %>%
+  mutate(p = Freq/sum(Freq),
+         time_cat = as.factor(Var1)) %>%
+  select(time_cat, p)
+visits2 <- den %>%
+  left_join(num) %>%
+  mutate(sw = p/fitted)
+
+model <- geeglm(
+  missed ~ time_cat,
+  id = id,
+  data = visits2,
+  family = binomial(link="identity"),
+  weights = sw,
+  corstr = "exchangeable"
+)
+coef <- as.data.frame(coef(summary(model)))
+ci <- as.data.frame(with(coef,
+           cbind(rownames(coef),
+                 estimate = percent(Estimate,1),
+                 Lower = round((Estimate - qnorm(0.975)*Std.err)*100,0),
+                 Upper = round((Estimate + qnorm(0.975)*Std.err)*100,0)))) %>%
+  filter(str_sub(V1,1,8) =="time_cat") %>%
+  mutate(time_cat = str_sub(V1,-1,-1),
+         ci = paste0(Lower,", ",Upper)) %>%
+  select(time_cat, estimate, ci)
+
+ 
+sink()
+```
+
+           Visits scheduled by individuals who lived closer to the clinic were more likely to be missed than visits scheduled by those who lived further away (@tbl-three). Individuals living in areas that were not transit-accessible were least likely to miss a scheduled visit; compared to those living 1-30 minutes away, they were `r ci_missed$estimate[ci_missed$time_cat=="4"]` less likely to miss a visit (95% CI: `r ci_missed$ci[ci_missed$time_cat=="4"]`) (@tbl-three).
+
+           The probability of rescheduling a missed visit was approximately 10 percentage points lower among individuals who lived \>60 vs. 1-30 minutes from the clinic, and the probability of attending a rescheduled visit was 9 percentage points higher among those living 31-60 vs. 1-30 minutes away (@tbl-three). However, confidence intervals around these estimates were wide due to the small numbers of missed and rescheduled visits.
+
+           After adjusting for sex, age, race/ethnicity, insurance type, income, and area socioeconomic deprivation, the association between transit time and the probability of missing a scheduled visit was substantially attenuated. For example, after adjustment, the probability of a missed visit for people living in areas from which the clinic was not transit-accessible was only 3% lower than for people who lived within 1-30 minutes of the clinic via public transit (95% CI: `r ci$ci[ci$time_cat=="4"]`)) (@tbl-three).
+
+## Discussion
+
+           Median transit time-to-clinic was four times as long as median driving time among individuals receiving comprehensive HIV care at an academic medical center in Baltimore. Individuals living further away from the clinic were less likely to miss scheduled visits. After accounting for demographic and socioeconomic factors, there was no association between transit time and the probability of missing a scheduled visit.
+
+           Several factors may explain why individuals living closer to the clinic had worse visit attendance. First, the Bartlett Practice is located in an area of concentrated socioeconomic disadvantage in East Baltimore. Individuals living near the clinic were more likely to have income \<=200% FPL (\$30,120 for a household of 1 in 2024). For low-income individuals, stressors (e.g., housing instability, food insecurity) and competing priorities (e.g., employment demands, caregiving responsibilities) present additional barriers to care engagement.[@dombrowski_impact_2025; @palar_longitudinal_2023; @mitchell_patient-identified_2023] In socioeconomically disadvantaged areas, poor transit infrastructure and safety concerns may also impede access to public transportation. Individuals living further from the clinic had higher income and lived in more advantaged neighborhoods, where resources such as covered bus stops may facilitate the use of public transportation. People with higher income may also own or have access to a car and be less reliant on public transportation. When we accounted for these factors by adjusting for individual income and area-level socioeconomic deprivation, we saw similar visit attendance regardless of distance to clinic.
+
+           Second, the Bartlett Practice routinely accommodates late arrivals and offers same-day and walk-in appointments. Individuals who arrive late because of transit delays are usually still seen, and those who miss appointments can reschedule them promptly. The consequences of transit delays may be more severe in clinics with more restrictive scheduling practices, where patients who run late are more likely to miss their appointments and may not be able to reschedule them for days or weeks.
+
+           Third, the clinic has established programs to reduce transportation barriers to care access, including providing bus passes and tokens, rideshare services, and linkage to mobility services. The clinic employs social workers and case managers who assess eligibility and link patients to needed services, which are funded through a variety of sources including the Ryan White HIV/AIDS Program (RWHAP), Medicare, Baltimore City, and community partners such as Moveable Feast. Patients who live further from the clinic may be more likely to receive door-to-door mobility or rideshare services compared to those who live nearby and rely on the bus system. While we did not directly measure the receipt of transportation support services, prior studies have demonstrated that receipt of these services can improve visit attendance and adherence to antiretroviral medications.[@magnus_association_2001; @sherer_hiv_2002]
+
+           There are already a number of evidence-based programmatic recommendations for addressing transportation needs among people with HIV.[@national_alliance_of_state_and_territorial_aids_directors_nastad_improving_nodate; @mccollum_mixed_2025; @andersen_retaining_2007; @magnus_association_2001; @sherer_hiv_2002; @althoff_correlates_2013; @lo_association_2002; @messeri_impact_2002] However, many of these approaches address transportation *affordability* rather than underlying structural problems with transit systems. For example, if bus schedules are unreliable or transit infrastructure is unsafe or not accessible, the effectiveness of transportation support services will be limited.[@miller_qualitative_2024] Moreover, our study suggests that access to transportation is not sufficient to support optimal care engagement for all people with HIV. Even in a setting where comprehensive care is accessible and transportation support services are available, there are still important barriers to care engagement among low-income and racially minoritized people with HIV.[@mitchell_patient-identified_2023] Future work should consider structural factors that intersect with access to care to shape care engagement, such as policies related to housing affordability, food security, paid sick leave, childcare affordability, and neighborhood safety.
+
+### Limitations
+
+           Our study had several limitations. First, our findings may not be generalizable to other contexts, such as larger cities with more robust subway or light rail systems (e.g., New York City, San Francisco, Boston, D.C., Philadelphia), or rural areas with limited access to public transportation. Second, we did not directly measure use of public transportation or proxies such as car ownership. Third, our estimates are based on transit timetables and do not account for delays. In future analyses, real-time transit data may yield more accurate estimates of time spent in transit. Fourth, we only measured time spent in transit and not any associated opportunity costs, such as lost wages or childcare expenses. A more complete consideration of transportation barriers would account for these opportunity costs, as well as any secondary effects. For example, individuals may move closer to transit routes to increase their proximity to healthcare and other services.[@sagrestano_transportation_2014] Fifth, we expect some error around our estimates because travel time was calculated from the centroid of the census block group of residence to preserve participant confidentiality, and because individuals may travel from locations other than their primary residence, such as their workplace. Sixth, because our analyses were conducted at the visit level, participants with more scheduled visits will be over-represented in the study sample, and those with the poorest care engagement may be underrepresented.
+
+### Conclusions
+
+           Among individuals receiving comprehensive HIV care in Baltimore, shorter transit time to care was associated with a higher probability of missing a scheduled visit. The clinic's location in a transit-accessible but socioeconomically disadvantaged area, its flexible scheduling practices, and the availability of transportation support services likely account for the inverse association between transit accessibility and visit attendance in this context.
+
+\newpage
+
+## References
+
+::: {#refs}
+:::
+
+\newpage
+
+## Figure Legends
+
+Figure 1: Public transit time to the Bartlett Practice across all in-person HIV primary care visits scheduled by residents of Baltimore City or Baltimore County in 2024
+
+Figure 2: Bivariate map of public transit time-to-clinic and Area Deprivation Index
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-one
+#| tbl-cap: "Scheduled in-person HIV primary care visits among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024, by visit outcome and participant demographics"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+visits %>%
+  filter(scheduled==1) %>%
+  select(apptstatus, birthsex, raceeth, agegrp, income, publicins, county) %>% 
+  as_factor() %>%
+  tbl_summary(by=apptstatus, percent="row") %>%
+  add_overall(last=TRUE)
+```
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-two
+#| tbl-cap: "Visit outcomes among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024, stratified by transit time-to-clinic"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+
+#Scheduled
+tbl1 <- visits %>%
+  filter(scheduled==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(time_cat, scheduled) %>%
+  tbl_summary(by = time_cat,
+                           statistic = list(scheduled ~ "{n}")) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA) %>%
+               modify_table_body(
+                 ~.x %>% filter(row_type %in% "level")
+                 ) %>%
+               modify_column_indent(columns = label, undo = TRUE)
+
+#Missed|Scheduled
+tbl2 <- visits %>%
+  filter(scheduled==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(time_cat, missed) %>%
+  tbl_summary(by = time_cat) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA)
+
+#Rescheduled|Missed
+tbl3 <- visits %>%
+  filter(missed==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(time_cat, rescheduled) %>%
+  tbl_summary(by = time_cat) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA)
+
+#Attended|Rescheduled
+tbl4 <- visits %>%
+  filter(rescheduled==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(time_cat, attended) %>%
+  tbl_summary(by = time_cat) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA)
+
+tbl_stack(list(tbl1, tbl2, tbl3, tbl4))
+```
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-three
+#| tbl-cap: "Differences in visit outcome probabilities by transit time-to-clinic among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+#calculate differences between groups with robust SE using linear binomial GEE
+
+#pause automatic printing of output
+sink(nullfile())
+
+#Missed|Scheduled
+missed <- visits %>%
+  filter(scheduled==1) %>%
+  mutate(time_cat=as.factor(time_cat))
+  
+model <- gee(
+  formula = missed ~ time_cat,
+  id = id,
+  data = missed,
+  family = binomial(link="identity"),
+  corstr = "exchangeable"
+)
+coef <- as.data.frame(coef(summary(model)))
+ci <- as.data.frame(with(coef,
+           cbind(rownames(coef),
+                 estimate = percent(Estimate,1),
+                 Lower = percent(Estimate - qnorm(0.975)*`Robust S.E.`,1),
+                 Upper = percent(Estimate + qnorm(0.975)*`Robust S.E.`,1)))) %>%
+  filter(V1 !="(Intercept)") %>%
+  mutate(time_cat = str_sub(V1,-1,-1),
+         estci = paste0(estimate, " (",Lower,", ",Upper,")")) %>%
+  select(time_cat, estci)
+ref <- data.frame(time_cat=1, estci="0")
+ci <- rbind(ref, ci)
+
+ci_missed <- ci %>%
+  mutate(outcome="Missed|Scheduled",
+         model="Crude")
+
+
+#Rescheduled|Missed
+rescheduled <- visits %>%
+  filter(missed==1) %>%
+  mutate(time_cat=as.factor(time_cat))
+  
+model <- gee(
+  formula = rescheduled ~ time_cat,
+  id = id,
+  data = rescheduled,
+  family = binomial(link="identity"),
+  corstr = "exchangeable"
+)
+coef <- as.data.frame(coef(summary(model)))
+ci <- as.data.frame(with(coef,
+           cbind(rownames(coef),
+                 estimate = percent(Estimate,1),
+                 Lower = percent(Estimate - qnorm(0.975)*`Robust S.E.`,1),
+                 Upper = percent(Estimate + qnorm(0.975)*`Robust S.E.`,1)))) %>%
+  filter(V1 !="(Intercept)") %>%
+  mutate(time_cat = str_sub(V1,-1,-1),
+         estci = paste0(estimate, " (",Lower,", ",Upper,")")) %>%
+  select(time_cat, estci)
+ref <- data.frame(time_cat=1, estci="0")
+ci <- rbind(ref, ci)
+
+ci_rescheduled <- ci %>%
+  mutate(outcome="Rescheduled|Missed",
+         model="Crude")
+
+
+#Attended|Rescheduled
+attended <- visits %>%
+  filter(rescheduled==1) %>%
+  mutate(time_cat=as.factor(time_cat))
+  
+model <- gee(
+  formula = attended ~ time_cat,
+  id = id,
+  data = attended,
+  family = binomial(link="identity"),
+  corstr = "exchangeable"
+)
+coef <- as.data.frame(coef(summary(model)))
+ci <- as.data.frame(with(coef,
+           cbind(rownames(coef),
+                 estimate = percent(Estimate,1),
+                 Lower = percent(Estimate - qnorm(0.975)*`Robust S.E.`,1),
+                 Upper = percent(Estimate + qnorm(0.975)*`Robust S.E.`,1)))) %>%
+  filter(V1 !="(Intercept)") %>%
+  mutate(time_cat = str_sub(V1,-1,-1),
+         estci = paste0(estimate, " (",Lower,", ",Upper,")")) %>%
+  select(time_cat, estci)
+ref <- data.frame(time_cat=1, estci="0")
+ci <- rbind(ref, ci)
+
+ci_attended <- ci %>%
+  mutate(outcome="Attended|Recheduled",
+         model="Crude")
+
+
+#adjust for covariates using IPW
+
+#check missingness in covariates
+#table(visits$birthsex, useNA = "ifany")
+#table(visits$agegrp, useNA = "ifany")
+#table(visits$raceeth, useNA = "ifany")
+#table(visits$publicins, useNA = "ifany")
+#table(visits$adi_bin, useNA = "ifany")
+
+visits2 <- visits %>%
+  filter(scheduled==1 & !is.na(adi_bin)) %>%
+  mutate(time_cat=as.factor(time_cat),
+         raceeth=as.factor(raceeth))
+
+#estimate weights using multinomial logistic regression
+weights <- multinom(time_cat ~ birthsex + raceeth + agegrp + publicins + income + adi_bin, data = visits2)
+pred <- fitted(weights)
+
+#get inverse of predicted probability of the observed value of time_cat
+den <- cbind(visits2, pred) %>%
+  mutate(fitted = if_else(time_cat==1, `1`,
+                              if_else(time_cat==2, `2`,
+                                      if_else(time_cat==3, `3`,
+                                              if_else(time_cat==4, `4`, NA)))))
+
+#get marginal probability of observed value of time_cat
+num <- as.data.frame(table(visits2$time_cat)) %>%
+  mutate(p = Freq/sum(Freq),
+         time_cat = as.factor(Var1)) %>%
+  select(time_cat, p)
+
+#calculate stabilized weights
+visits2 <- den %>%
+  left_join(num) %>%
+  mutate(sw = p/fitted)
+
+#look at distribution of weights
+summary(visits2$sw)
+
+#weighted outcome model
+model <- geeglm(
+  missed ~ time_cat,
+  id = id,
+  data = visits2,
+  family = binomial(link="identity"),
+  weights = sw,
+  corstr = "exchangeable"
+)
+coef <- as.data.frame(coef(summary(model)))
+ci <- as.data.frame(with(coef,
+           cbind(rownames(coef),
+                 estimate = percent(Estimate,1),
+                 Lower = round((Estimate - qnorm(0.975)*Std.err)*100,0),
+                 Upper = round((Estimate + qnorm(0.975)*Std.err)*100,0)))) %>%
+  filter(str_sub(V1,1,8) =="time_cat") %>%
+  mutate(time_cat = str_sub(V1,-1,-1),
+         estci = paste0(estimate," (",Lower,", ",Upper,")")) %>%
+  select(time_cat, estci)
+ref <- data.frame(time_cat=1, estci="0")
+ci_adjusted <- rbind(ref, ci) %>%
+  mutate(outcome="Missed|Scheduled",
+         model="Adjusted*")
+
+sink()  
+
+ci <- rbind(ci_missed, ci_rescheduled, ci_attended, ci_adjusted)
+
+#apply labels
+val_labels(ci) <- list(
+  time_cat=c("1-30 Min"="1","31-60 Min"="2","61-120 Min"="3","Not Accessible"="4")
+)
+var_label(ci) <- list(
+  outcome="Visit Outcome"
+)
+ci <- ci %>% as_factor(only_labelled = TRUE)
+
+#transpose long to wide
+ci_long <- pivot_wider(ci, names_from = c(time_cat), values_from = estci)
+
+
+ci_long %>%
+  group_by(model) %>%
+  gt()
+
+```
+
+\*Adjusted for sex assigned at birth (male vs. female), race/ethnicity (non-Hispanic Black or Hispanic vs. non-Hispanic White), age group (\<45 vs. \>=45), insurance type (public vs. private), (income \<=200% vs. \>200% FPL), and area-level socioeconomic deprivation (bottom 80% vs. top 20%). Excludes observations missing data on ADI: n=149; 2.2%.
+:::
+
+::: {.content-visible when-format="pdf"}
+```{r}
+#| label: fig-one
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-cap: "Public transit time to the Bartlett Practice across all in-person HIV primary care visits scheduled by residents of Baltimore City or Baltimore County in 2024"
+#| fig-width: 8
+#| fig-height: 6
+
+#Merge travel times with census block group geometry
+map <- visits %>% 
+  filter(scheduled==1) %>%
+  full_join(bc, by=c("geocode" = "GEOID")) %>%
+  select(geocode, time_cat, geometry) %>%
+  st_as_sf()
+
+#Chloropleth Map
+main_map <- ggplot() +
+  geom_sf(data = map, aes(fill=as_factor(time_cat))) +
+  scale_fill_brewer(type=seq,
+                    palette = "YlGnBu",
+                    direction = 1,
+                    na.value = "grey95",
+                    labels = function(breaks) {breaks[is.na(breaks)] <- "No Visits"; breaks}) +
+  geom_sf(data=bartlett_sf, aes(fill="Bartlett Practice"), color='firebrick2', shape=17, size=3) +
+  annotation_scale(location = "bl", width_hint = 0.25, text_cex = 0.8, line_width = 0.8, unit_category = "imperial") +
+  annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.2, "in"), pad_y = unit(0.25, "in"), style = north_arrow_fancy_orienteering) +
+  theme_map() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 12),
+        legend.title = element_blank())
+
+#Baltimore City Only
+inset_map <- ggplot() +
+  geom_sf(data = map %>% filter(substr(geocode,1,5)==24510), aes(fill=as_factor(time_cat))) +
+  scale_fill_brewer(type=seq,
+                    palette = "YlGnBu",
+                    direction = 1,
+                    na.value = "grey95") +
+  geom_sf(data=bartlett_sf, aes(color = "Bartlett Practice"), size = 3, shape = 17, , color = "firebrick2") +
+  annotation_scale(location = "tr", width_hint = 0.25, text_cex = 0.8, line_width = 0.8, unit_category = "imperial", pad_y=unit(-0.0025, "in")) +
+  ggtitle("Baltimore City") +
+  theme_map() + 
+  theme(legend.position = "none",
+        plot.title = element_text(size = 10, face = "bold"))
+
+ggdraw() +
+  draw_plot(main_map, hjust=0.15) +
+  draw_plot(inset_map, hjust=-0.55, vjust=-0.4, width=0.7, height=0.7)
+```
+:::
+
+\newpage
+
+::: {.content-visible when-format="pdf"}
+```{r}
+#| label: fig-two
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-cap: "Bivariate map of public transit time-to-clinic and Area Deprivation Index*"
+#| fig-width: 7
+#| fig-height: 5
+
+#Bivariate Map
+map2 <- visits %>%
+  filter(scheduled==1) %>%
+  full_join(bc, by=c("geocode" = "GEOID")) %>%
+  select(adi_state, adi_bin, time_cat, time_bin, geometry) %>%
+  filter(!is.na(adi_bin)) %>%
+  bi_class(x = time_bin, y = adi_bin, style = "quantile", dim = 2) %>%
+  st_as_sf()
+
+bi_map <- ggplot() +
+  geom_sf(data=map, fill="white", size=0.1, show.legend=FALSE) +
+  geom_sf(data = map2, aes(fill=bi_class), size = 0.1, show.legend=FALSE) +
+  annotation_scale(location = "bl", width_hint = 0.25, text_cex = 0.8, line_width = 0.8, unit_category = "imperial") +
+  annotation_north_arrow(location = "bl", which_north = "true", pad_x = unit(0.2, "in"), pad_y = unit(0.25, "in"), style = north_arrow_fancy_orienteering) +
+  bi_scale_fill(pal="PinkGrn", dim=2) +
+  bi_theme()
+
+
+bi_legend <- bi_legend(pal = "PinkGrn",
+                    dim = 2,
+                    xlab = "Higher Transit Time",
+                    ylab = "Higher ADI",
+                    size = 10)
+
+ggdraw() +
+  draw_plot(bi_map, 0, 0, 1, 1) +
+  draw_plot(bi_legend, x=0.6, y=0.6, width=0.3, height=0.3)
+
+```
+
+\*Transit time categorized as \<=60 minutes vs. \>60 minutes; ADI categorized as 1-8 (80% least-deprived census block groups in Maryland) vs. 9-10 (20% most-deprived census block groups in Maryland).
+:::
+
+::: {.content-visible when-format="pdf"}
+\newpage
+
+# Appendix {.appendix}
+
+\appendix \renewcommand{\thefigure}{A\arabic{figure}} \renewcommand{\thetable}{A\arabic{table}} \setcounter{figure}{0} \setcounter{table}{0}
+
+```{r}
+#| label: tbl-a1
+#| tbl-cap: "Public Transportation Routes in Baltimore City and Baltimore County"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+  
+input <- c("Local",
+          "Local Bus",
+          "Maryland Transit Administration",
+          "Bus",
+          "$2",
+          "Local",
+          "Baltimore Light RailLink",
+          "Maryland Transit Administration",
+          "Light Rail",
+          "$2",
+          "Local",
+          "Baltimore Metro SubwayLink",
+          "Maryland Transit Administration",
+          "Metro",
+          "$2",
+          "Local",
+          "Charm City Circulator",
+          "City of Baltimore",
+          "Bus",
+          "Free",
+          "Local",
+          "Harbor Connector",
+          "City of Baltimore",
+          "Ferry",
+          "Free",
+          "Local",
+          "Towson Loop",
+          "Baltimore County",
+          "Bus",
+          "Free")
+
+
+routes <- matrix(input, ncol = 5, byrow = TRUE) %>% 
+  as_tibble() %>% 
+  rename(Level=V1, Service=V2, Provider=V3, Mode=V4, Fare=V5)
+
+kable(routes %>% select(Service, Provider, Mode, Fare))
+
+```
+
+Routes administered by the Maryland Transit Administration (MTA) offer 90-minute free transfers across MTA Core Services (including Local Bus, Light RailLink, and Metro SubwayLink). Discounted fares are available for people older than 65 (\$1), people with disabilities (\$1), and students (\$1.50). MTA also provides paratransit options for people unable to access public transit, with a fare of \$2.20.
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-a2
+#| tbl-cap: "Characteristics of scheduled, missed, rescheduled, and make-up visits among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+#all scheduled visits
+col1 <- visits %>%
+  filter(scheduled==1) %>%
+  select(birthsex, raceeth, agegrp, income, publicins, county) %>% 
+  as_factor() %>%
+  tbl_summary(percent="column") %>%
+  add_overall(last=TRUE)
+#all missed visits
+col2 <- visits %>%
+  filter(missed==1) %>%
+  select(birthsex, raceeth, agegrp, income, publicins, county) %>% 
+  as_factor() %>%
+  tbl_summary(percent="column") %>%
+  add_overall(last=TRUE)
+#rescheduled visits
+col3 <- visits %>%
+  filter(rescheduled==1) %>%
+  select(birthsex, raceeth, agegrp, income, publicins, county) %>% 
+  as_factor() %>%
+  tbl_summary(percent="column") %>%
+  add_overall(last=TRUE)
+#makeup visits
+col4 <- visits %>%
+  filter(attended==1) %>%
+  select(birthsex, raceeth, agegrp, income, publicins, county) %>% 
+  as_factor() %>%
+  tbl_summary(percent="column") %>%
+  add_overall(last=TRUE)
+
+tbl_merge(
+  tbls = list(col1, col2, col3, col4),
+  tab_spanner = c("Scheduled Visits", "Missed Visits", "Rescheduled Visits", "Make-up Visits")
+)
+
+```
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-a3
+#| tbl-cap: "N (%) of make-up visits that were walk-ins and that were attended via telehealth, stratified by transit time to clinic"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+  
+#All Makeup Visits
+val_labels(visits) <- list(
+  attended=c("Makeup Visits, N"=1)
+)
+
+tbl1 <- visits %>%
+  filter(attended==1) %>%
+  select(time_cat, attended) %>%
+  as_factor(only_labelled = TRUE) %>%
+  tbl_summary(by = time_cat,
+                            statistic = list(attended ~ "{n}")) %>%
+  add_overall(last=TRUE) %>%
+               modify_header(all_stat_cols() ~ "**{level}**") %>%
+               modify_footnote(everything() ~ NA) %>%
+  modify_table_body(
+     ~.x %>% filter(row_type %in% "level")
+                 ) %>%
+  modify_column_indent(columns = label, undo = TRUE)
+
+#Same-Day/Telehealth
+tbl2 <- visits %>%
+  filter(attended==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(time_cat, attended_sameday, attended_telehealth) %>%
+  tbl_summary(by = time_cat) %>%
+               modify_header(all_stat_cols() ~ "**{level}**") %>%
+  add_overall(last=TRUE) %>%
+               modify_footnote(everything() ~ NA)
+
+
+tbl_stack(list(tbl1, tbl2))
+
+```
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-a4
+#| tbl-cap: "Driving time, total public transit time, waiting time, walking time, and number of rides across all scheduled in-person HIV primary care visits among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+tbl1 <- visits %>%
+  filter(scheduled==1) %>%
+  mutate(time_cat=as_factor(time_cat)) %>%
+  select(time_cat, drivetime) %>%
+  tbl_summary(by=time_cat) %>%
+  add_overall(last=TRUE)
+  
+tbl2 <- visits %>%
+  filter(scheduled==1) %>%
+  remove_value_labels(time_cat=4) %>%
+  filter(time_cat != 4) %>%
+  mutate(time_cat=as_factor(time_cat)) %>%
+  select(time_cat, total, walk, wait, nrides) %>%
+  tbl_summary(by=time_cat) %>%
+  add_overall(last=TRUE)
+
+tbl_stack(list(tbl1, tbl2))
+
+```
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-a5
+#| tbl-cap: "Demographic characteristics of scheduled in-person HIV primary care visits among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024, by transit accessibility"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+  
+visits %>%
+  filter(scheduled==1) %>%
+  select(time_cat, birthsex, raceeth, agegrp, publicins, income, adi_bin) %>% 
+  as_factor() %>%
+  tbl_summary(by = time_cat, percent = "column")
+```
+:::
+
+::: {.content-visible .landscape when-format="pdf"}
+```{r}
+#| label: tbl-a6
+#| tbl-cap: "Visit outcomes among Johns Hopkins HIV Clinical Cohort participants living in Baltimore City or Baltimore County in 2024, stratified by season"
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+
+
+#Scheduled
+tbl1 <- visits %>%
+  filter(scheduled==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(winter, scheduled) %>%
+  tbl_summary(by = winter,
+                           statistic = list(scheduled ~ "{n}")) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA) %>%
+               modify_table_body(
+                 ~.x %>% filter(row_type %in% "level")
+                 ) %>%
+               modify_column_indent(columns = label, undo = TRUE)
+
+#Missed|Scheduled
+tbl2 <- visits %>%
+  filter(scheduled==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(winter, missed) %>%
+  tbl_summary(by = winter) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA)
+
+#Rescheduled|Missed
+tbl3 <- visits %>%
+  filter(missed==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(winter, rescheduled) %>%
+  tbl_summary(by = winter) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA)
+
+
+#Attended|Rescheduled
+val_labels(visits) <- list(attended=c())
+#visits$attended <- remove_value_labels(visits$attended)
+tbl4 <- visits %>%
+  filter(rescheduled==1) %>%
+  as_factor(only_labelled = TRUE) %>%
+  select(winter, attended) %>%
+  tbl_summary(by = winter) %>%
+               modify_header(all_stat_cols() ~ "**{level}**",
+                             label = "**Visit Outcome**") %>%
+               modify_footnote(everything() ~ NA)
+
+tbl_stack(list(tbl1, tbl2, tbl3, tbl4))
+
+```
+:::
